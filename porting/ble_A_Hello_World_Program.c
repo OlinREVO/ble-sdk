@@ -59,12 +59,12 @@ The following instructions describe the steps to be made on the Windows PC:
  * }
  *
  */
-#include <SPI.h>
-#include <lib_aci.h>
-#include <aci_setup.h>
+#include "lib_aci.h"
+#include "aci_setup.h"
 #include <util/delay.h>
 #include "uart_over_ble.h"
 #include "porting.h"
+#include <string.h>
 
 /**
 Put the nRF8001 setup in the RAM of the nRF8001.
@@ -161,15 +161,8 @@ void setup(void)
   aci_state.aci_setup_info.num_setup_msgs     = NB_SETUP_MESSAGES;
 
   aci_state.aci_pins.board_name = BOARD_DEFAULT; //See board.h for details REDBEARLAB_SHIELD_V1_1 or BOARD_DEFAULT
-  
-  aci_state.aci_pins.spi_clock_divider      = SPI_CLOCK_DIV8;//SPI_CLOCK_DIV8  = 2MHz SPI speed
-                                                             //SPI_CLOCK_DIV16 = 1MHz SPI speed
-  
-  // Hard-coded with defines
-  // aci_state.aci_pins.reset_pin              = 9; //4 for Nordic board, UNUSED for REDBEARLAB_SHIELD_V1_1
 
   aci_state.aci_pins.interface_is_interrupt = true; //Interrupts still not available in Chipkit
-  aci_state.aci_pins.interrupt_number       = 0;
 
   //We reset the nRF8001 here by toggling the RESET line connected to the nRF8001
   //If the RESET line is not available we call the ACI Radio Reset to soft reset the nRF8001

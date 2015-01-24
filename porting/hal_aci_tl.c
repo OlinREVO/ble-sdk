@@ -23,15 +23,16 @@
 @brief Implementation of the ACI transport layer module
 */
 
+#include "porting.h"
+#include <util/atomic.h>
 #include <util/delay.h>
-#include <SPI.h>
 #include "hal_platform.h"
 #include "hal_aci_tl.h"
 #include "aci_queue.h"
 #if ( !defined(__SAM3X8E__) && !defined(__PIC32MX__) )
 #include <avr/sleep.h>
 #endif
-#include "porting.h"
+
 /*
 PIC32 supports only MSbit transfer on SPI and the nRF8001 uses LSBit
 Use the REVERSE_BITS macro to convert from MSBit to LSBit
@@ -48,7 +49,6 @@ The outgoing command and the incoming event needs to be converted
 
 static void m_aci_data_print(hal_aci_data_t *p_data);
 static void m_aci_event_check(void);
-static void m_aci_isr(void);
 static void m_aci_pins_set(aci_pins_t *a_pins_ptr);
 static inline void m_aci_reqn_disable (void);
 static inline void m_aci_reqn_enable (void);
@@ -72,7 +72,7 @@ void m_aci_data_print(hal_aci_data_t *p_data)
 /*
   Interrupt service routine called when the RDYN line goes low. Runs the SPI transfer.
 */
-static void m_aci_isr(void)
+ISR(INT2_vect)
 {
   hal_aci_data_t data_to_send;
   hal_aci_data_t received_data;
@@ -108,11 +108,9 @@ static void m_aci_isr(void)
     // Disable ready line interrupt until we have room to store incoming messages
     if (aci_queue_is_full_from_isr(&aci_rx_q))
     {
-      detachInterrupt(a_pins_local_ptr->interrupt_number);
+      EIMSK &= ~(_BV(INT2)); // disable interrupt on this line
     }
   }
-
-  return;
 }
 
 /*
@@ -195,12 +193,13 @@ static inline void m_aci_reqn_enable (void)
 
 static void m_aci_q_flush(void)
 {
-  // TODO: Change these interrupt statements
-  noInterrupts();
+  // Critical section
+  ATOMIC_BLOCK(ATOMIC_RESTORESTATE)
+  {
   /* re-initialize aci cmd queue and aci event queue to flush them*/
   aci_queue_init(&aci_tx_q);
   aci_queue_init(&aci_rx_q);
-  interrupts();
+  }
 }
 
 static bool m_aci_spi_transfer(hal_aci_data_t * data_to_send, hal_aci_data_t * received_data)
@@ -253,22 +252,6 @@ void hal_aci_tl_debug_print(bool enable)
 void hal_aci_tl_pin_reset(void)
 {
     RESET_PIN_DDR |= _BV(RESET_PIN); // set the reset pin to output
-
-    if ((REDBEARLAB_SHIELD_V1_1     == a_pins_local_ptr->board_name) ||
-        (REDBEARLAB_SHIELD_V2012_07 == a_pins_local_ptr->board_name))
-    {
-        //The reset for the Redbearlab v1.1 and v2012.07 boards are inverted and has a Power On Reset
-        //circuit that takes about 100ms to trigger the reset
-        RESET_PIN_PORT |= _BV(RESET_PIN); // set reset pin to high
-        _delay_ms(100);
-        RESET_PIN_PORT &= ~(_BV(RESET_PIN)); // set reset pin to low
-    }
-    else
-    {
-        RESET_PIN_PORT |= _BV(RESET_PIN); // set reset pin to high
-        RESET_PIN_PORT &= ~(_BV(RESET_PIN)); // set reset pin to low
-        RESET_PIN_PORT |= _BV(RESET_PIN); // set reset pin to high
-    }
 }
 
 bool hal_aci_tl_event_peek(hal_aci_data_t *p_aci_data)
@@ -307,7 +290,9 @@ bool hal_aci_tl_event_get(hal_aci_data_t *p_aci_data)
     if (was_full && a_pins_local_ptr->interface_is_interrupt)
 	  {
       /* Enable RDY line interrupt again */
-      attachInterrupt(a_pins_local_ptr->interrupt_number, m_aci_isr, LOW);
+      EICRA &= ~(_BV(ISC20) | _BV(ISC21)); // trigger this interrupt when RDY is low
+      EIMSK |= _BV(INT2); // enable interrupt on this line
+      sei();
     }
 
     /* Attempt to pull REQN LOW since we've made room for new messages */
@@ -358,8 +343,9 @@ void hal_aci_tl_init(aci_pins_t *a_pins, bool debug)
   if (a_pins->interface_is_interrupt)
   {
     // We use the LOW level of the RDYN line as the atmega328 can wakeup from sleep only on LOW
-    // TODO: port interrupt statement
-    attachInterrupt(a_pins->interrupt_number, m_aci_isr, LOW);
+    EICRA &= ~(_BV(ISC20) | _BV(ISC21)); // trigger this interrupt when RDY is low
+    EIMSK |= _BV(INT2); // enable interrupt on this line
+    sei();
   }
 }
 
@@ -393,7 +379,7 @@ bool hal_aci_tl_send(hal_aci_data_t *p_aci_cmd)
 
 static uint8_t spi_readwrite(const uint8_t aci_byte)
 {
-  SPIDR = aci_byte; // Writing to the data register initiates transmission
+  SPDR = aci_byte; // Writing to the data register initiates transmission
 }
 
 bool hal_aci_tl_rx_q_empty (void)

@@ -25,14 +25,11 @@ PROGRAMMER = avrispmkII
 PORT = usb
 
 # define flags
-CFLAGS = -mmcu=$(MCU) -g -Os -Wall -Wunused
+CFLAGS = -mmcu=$(MCU) -g -Os -Wunused -std=c99 -IINCLUDE
 ASFLAGS = -mmcu=$(MCU) -x assembler-with-cpp -Wa,-gstabs
 LDFLAGS = -mmcu=$(MCU) -Wl,-Map=$(OUTDIR)/$(TARGET).map
-# only use -P flag if port is set
-ifdef PORT
-PORT_FLAG = -P
-endif
-AVRDUDE_FLAGS = -p $(MCU) -c $(PROGRAMMER) $(PORT_FLAG) $(PORT)
+
+AVRDUDE_FLAGS = -p $(MCU) -c $(PROGRAMMER) -P $(PORT)
 #######################################
 # end of user configuration
 #######################################

@@ -26,6 +26,9 @@
 #include "hal_aci_tl.h"
 #include "aci_queue.h"
 #include "ble_assert.h"
+#include <stddef.h>
+#include <string.h>
+#include <util/atomic.h>
 
 void aci_queue_init(aci_queue_t *aci_q)
 {
@@ -119,12 +122,13 @@ bool aci_queue_is_empty(aci_queue_t *aci_q)
   ble_assert(NULL != aci_q);
 
   //Critical section
-  noInterrupts();
-  if (aci_q->head == aci_q->tail)
+  ATOMIC_BLOCK(ATOMIC_RESTORESTATE)
   {
-    state = true;
+    if (aci_q->head == aci_q->tail)
+    {
+      state = true;
+    }
   }
-  interrupts();
 
   return state;
 }
@@ -143,11 +147,10 @@ bool aci_queue_is_full(aci_queue_t *aci_q)
   ble_assert(NULL != aci_q);
 
   //This should be done in a critical section
-  noInterrupts();
-  
-  state = (aci_q->tail == aci_q->head + ACI_QUEUE_SIZE);
-
-  interrupts();
+  ATOMIC_BLOCK(ATOMIC_RESTORESTATE)
+  {
+    state = (aci_q->tail == aci_q->head + ACI_QUEUE_SIZE);
+  }
   //end
 
   return state;

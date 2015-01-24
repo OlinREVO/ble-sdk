@@ -1,5 +1,4 @@
-#ifndef PORTING_H
-#define PORTING_H
+#define F_CPU (1000000L)
 
 // all SPI pins are on the same port
 #define SPI_DDR         DDRB
@@ -32,5 +31,3 @@
 #define true            1
 #define FALSE           0
 #define false           0
-
-#endif

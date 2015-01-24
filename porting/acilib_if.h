@@ -30,6 +30,8 @@
 #ifndef _acilib_IF_H_
 #define _acilib_IF_H_
 
+#include "porting.h"
+
 /** @brief Encode the ACI message for set test mode command
  *
  *  @param[in,out]  buffer      Pointer to ACI message buffer

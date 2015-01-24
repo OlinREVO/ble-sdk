@@ -37,6 +37,8 @@
 #include "acilib_defs.h"
 #include "acilib_if.h"
 #include "acilib_types.h"
+#include "porting.h"
+#include <string.h>
 
 
 void acil_encode_cmd_set_test_mode(uint8_t *buffer, aci_cmd_params_test_t *p_aci_cmd_params_test)

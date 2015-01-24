@@ -69,11 +69,7 @@ typedef struct aci_pins_t
 {
 	uint8_t board_name;             //Optional : Use BOARD_DEFAULT if you do not know. See boards.h
 	
-	uint8_t spi_clock_divider;      //Required : Clock divider on the SPI clock : nRF8001 supports a maximum clock of 3MHz
-	
 	bool	interface_is_interrupt;	//Required - true = Uses interrupt on RDYN pin. false - Uses polling on RDYN pin
-	
-	uint8_t	interrupt_number;		//Required when using interrupts, otherwise ignored
 } aci_pins_t;
 
 /** @brief ACI Transport Layer initialization.
