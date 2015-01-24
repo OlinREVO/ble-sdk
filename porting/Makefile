@@ -1,48 +1,101 @@
-### Get the current directory
-CURRENT_DIR       = $(shell basename $(CURDIR))
+# AVR Makefile
+# #####################################
+#
+# Part of the uCtools project
+# uctools.github.com
+#
+#######################################
+# user configuration:
+#######################################
+# TARGET: name of the output file
+TARGET = main
+# MCU: part number to build for
+MCU = atmega16m1
+# SOURCES: list of input source sources
+SOURCES = $(shell ls *.c)
+# SOURCES = ble_A_Hello_World_Program.c
+$(info $$SOURCES is [${SOURCES}])
+INCLUDE = $(shell ls *.h*)
+$(info $$INCLUDE is [${INCLUDE}])
+# OUTDIR: directory to use for output
+OUTDIR = build
+# PROGRAMMER: name of programmer
+PROGRAMMER = avrispmkII
+# PORT: location of programmer
+PORT = usb
 
-### PROJECT_DIR
-PROJECT_DIR       = $(CURRENT_DIR)
+# define flags
+CFLAGS = -mmcu=$(MCU) -g -Os -Wall -Wunused
+ASFLAGS = -mmcu=$(MCU) -x assembler-with-cpp -Wa,-gstabs
+LDFLAGS = -mmcu=$(MCU) -Wl,-Map=$(OUTDIR)/$(TARGET).map
+# only use -P flag if port is set
+ifdef PORT
+PORT_FLAG = -P
+endif
+AVRDUDE_FLAGS = -p $(MCU) -c $(PROGRAMMER) $(PORT_FLAG) $(PORT)
+#######################################
+# end of user configuration
+#######################################
+#
+#######################################
+# binaries
+#######################################
+CC      = avr-gcc
+LD      = avr-ld
+AR      = avr-ar
+AS      = avr-gcc
+GASP    = avr-gasp
+NM      = avr-nm
+OBJCOPY = avr-objcopy
+RM      = rm -f
+MKDIR	= mkdir -p
+AVRDUDE = avrdude
+#######################################
 
-### ARDMK_DIR
-### Path to the Arduino-Makefile directory. 
-### Change this depending on where you have saved the main makefile
-ARDMK_DIR     =/cygdrive/c/Users/emga/Arduino-Makefile
+# file that includes all dependencies
+DEPEND = $(SOURCES:.c=.d)
 
-### ARDUINO_DIR
-### Path to the Arduino application and resources directory.
-### Change this variable as it depends where the make file is located
-ARDUINO_DIR   =../../../../../Arduino
+# list all object files
+OBJECTS = $(addprefix $(OUTDIR)/,$(notdir $(SOURCES:.c=.o)))
+$(info $$OBJECTS is [${OBJECTS}])
 
-### USER_LIB_PATH
-### Path to where the your project's libraries are stored.
-#USER_LIB_PATH     :=  $(PROJECT_DIR)/lib
+# default: build hex file
+all: $(OUTDIR)/$(TARGET).hex
 
-### BOARD_TAG
-### It must be set to the board you are currently using. (i.e uno, mega2560, etc.)
-BOARD_TAG         = uno
+# S-record file
+$(OUTDIR)/%.srec: $(OUTDIR)/%.elf
+	$(OBJCOPY) -j .text -j .data -O srec $< $@
 
-### MONITOR_BAUDRATE
-### It must be set to Serial baudrate value you are using.
-MONITOR_BAUDRATE  = 115200
+# Intel hex file
+$(OUTDIR)/%.hex: $(OUTDIR)/%.elf
+	$(OBJCOPY) -O ihex -R .eeprom $< $@
 
-### ARDUINO_LIBS
-### Libraries used on the BLE project
-ARDUINO_LIBS = SPI BLE EEPROM
+# elf file
+$(OUTDIR)/%.elf: $(OBJECTS)
+	$(CC) $(OBJECTS) $(LDFLAGS) $(LIBS) -o $@
 
-### MONITOR_PORT
-### The port to which the Arduino is connected
-MONITOR_PORT = com7
+# build all objects
+$(OUTDIR)/%.o: %.c | $(OUTDIR)
+	$(CC) -c $(CFLAGS) -o $@ $<
 
-### CPPFLAGS
-### Flags you might want to set for debugging purpose. Comment to stop.
-#CPPFLAGS         = -pedantic -Wall -Wextra   DEFINED ON THE MAKE FILE
+# assembly listing
+%.lst: %.c
+	$(CC) -c $(ASFLAGS) -Wa,-anlhd $< > $@
 
-### OBJDIR
-### This is were you put the binaries you just compile using 'make'
-#OBJDIR            = $(PROJECT_DIR)/bin/$(BOARD_TAG)/$(CURRENT_DIR) DEFINED ON THE MAKEFILE
+# create the output directory
+$(OUTDIR):
+	$(MKDIR) $(OUTDIR)
 
-### path to Arduino.mk, inside the ARDMK_DIR
-include $(ARDMK_DIR)/Arduino.mk
+# download to mcu flash
+flash: $(OUTDIR)/$(TARGET).hex
+	$(AVRDUDE) $(AVRDUDE_FLAGS) -U flash:w:$<
 
+# verify mcu flash
+verify: $(OUTDIR)/$(TARGET).hex
+	$(AVRDUDE) $(AVRDUDE_FLAGS) -U flash:v:$<
 
+# remove build artifacts and executables
+clean:
+	-$(RM) $(OUTDIR)/*
+
+.PHONY: all flash verify clean

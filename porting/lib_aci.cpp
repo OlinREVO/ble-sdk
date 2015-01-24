@@ -23,6 +23,7 @@
   @brief Implementation of the ACI library.
  */
 
+#include <util/delay.h>
 #include "hal_platform.h"
 #include "aci.h"
 #include "aci_cmds.h"
@@ -109,7 +110,7 @@ void lib_aci_board_init(aci_state_t *aci_stat)
 	  The Bluetooth low energy Arduino shield v1.1 requires about 100ms to reset.
 	  This is not required for the nRF2740, nRF2741 modules
 	  */
-	  delay(100);
+	  _delay_ms(100);
   
 	  /*
 	  Send the soft reset command to the nRF8001 to get the nRF8001 to a known state.

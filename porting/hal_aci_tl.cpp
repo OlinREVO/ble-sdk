@@ -23,6 +23,7 @@
 @brief Implementation of the ACI transport layer module
 */
 
+#include <util/delay.h>
 #include <SPI.h>
 #include "hal_platform.h"
 #include "hal_aci_tl.h"
@@ -30,6 +31,7 @@
 #if ( !defined(__SAM3X8E__) && !defined(__PIC32MX__) )
 #include <avr/sleep.h>
 #endif
+#include "porting.h"
 /*
 PIC32 supports only MSbit transfer on SPI and the nRF8001 uses LSBit
 Use the REVERSE_BITS macro to convert from MSBit to LSBit
@@ -64,16 +66,7 @@ static aci_pins_t	 *a_pins_local_ptr;
 
 void m_aci_data_print(hal_aci_data_t *p_data)
 {
-  const uint8_t length = p_data->buffer[0];
-  uint8_t i;
-  Serial.print(length, DEC);
-  Serial.print(" :");
-  for (i=0; i<=length; i++)
-  {
-    Serial.print(p_data->buffer[i], HEX);
-    Serial.print(F(", "));
-  }
-  Serial.println(F(""));
+  // We can't print anything from our AVR setup
 }
 
 /*
@@ -137,7 +130,7 @@ static void m_aci_event_check(void)
   }
 
   // If the ready line is disabled and we have pending messages outgoing we enable the request line
-  if (HIGH == digitalRead(a_pins_local_ptr->rdyn_pin))
+  if (SPI_PIN & _BV(SPI_RDY))
   {
     if (!aci_queue_is_empty(&aci_tx_q))
     {
@@ -192,16 +185,17 @@ static void m_aci_pins_set(aci_pins_t *a_pins_ptr)
 
 static inline void m_aci_reqn_disable (void)
 {
-  digitalWrite(a_pins_local_ptr->reqn_pin, 1);
+  SPI_PORT |= _BV(SPI_REQ);
 }
 
 static inline void m_aci_reqn_enable (void)
 {
-  digitalWrite(a_pins_local_ptr->reqn_pin, 0);
+  SPI_PORT &= ~(_BV(SPI_REQ));
 }
 
 static void m_aci_q_flush(void)
 {
+  // TODO: Change these interrupt statements
   noInterrupts();
   /* re-initialize aci cmd queue and aci event queue to flush them*/
   aci_queue_init(&aci_tx_q);
@@ -258,25 +252,22 @@ void hal_aci_tl_debug_print(bool enable)
 
 void hal_aci_tl_pin_reset(void)
 {
-    if (UNUSED != a_pins_local_ptr->reset_pin)
-    {
-        pinMode(a_pins_local_ptr->reset_pin, OUTPUT);
+    RESET_PIN_DDR |= _BV(RESET_PIN); // set the reset pin to output
 
-        if ((REDBEARLAB_SHIELD_V1_1     == a_pins_local_ptr->board_name) ||
-            (REDBEARLAB_SHIELD_V2012_07 == a_pins_local_ptr->board_name))
-        {
-            //The reset for the Redbearlab v1.1 and v2012.07 boards are inverted and has a Power On Reset
-            //circuit that takes about 100ms to trigger the reset
-            digitalWrite(a_pins_local_ptr->reset_pin, 1);
-            delay(100);
-            digitalWrite(a_pins_local_ptr->reset_pin, 0);
-        }
-        else
-        {
-            digitalWrite(a_pins_local_ptr->reset_pin, 1);
-            digitalWrite(a_pins_local_ptr->reset_pin, 0);
-            digitalWrite(a_pins_local_ptr->reset_pin, 1);
-        }
+    if ((REDBEARLAB_SHIELD_V1_1     == a_pins_local_ptr->board_name) ||
+        (REDBEARLAB_SHIELD_V2012_07 == a_pins_local_ptr->board_name))
+    {
+        //The reset for the Redbearlab v1.1 and v2012.07 boards are inverted and has a Power On Reset
+        //circuit that takes about 100ms to trigger the reset
+        RESET_PIN_PORT |= _BV(RESET_PIN); // set reset pin to high
+        _delay_ms(100);
+        RESET_PIN_PORT &= ~(_BV(RESET_PIN)); // set reset pin to low
+    }
+    else
+    {
+        RESET_PIN_PORT |= _BV(RESET_PIN); // set reset pin to high
+        RESET_PIN_PORT &= ~(_BV(RESET_PIN)); // set reset pin to low
+        RESET_PIN_PORT |= _BV(RESET_PIN); // set reset pin to high
     }
 }
 
@@ -310,7 +301,6 @@ bool hal_aci_tl_event_get(hal_aci_data_t *p_aci_data)
   {
     if (aci_debug_print)
     {
-      Serial.print(" E");
       m_aci_data_print(p_aci_data);
     }
 
@@ -339,52 +329,36 @@ void hal_aci_tl_init(aci_pins_t *a_pins, bool debug)
   /* Needs to be called as the first thing for proper intialization*/
   m_aci_pins_set(a_pins);
 
-  /*
-  The SPI lines used are mapped directly to the hardware SPI
-  MISO MOSI and SCK
-  Change here if the pins are mapped differently
+  // Enable SPI, enable interrupt, set as master, set clock prescalar at 8,
+  //  set LSB first, leave data mode at 0
+  SPCR = _BV(SPE) | _BV(SPIE) | _BV(MSTR) | _BV(SPR0) | _BV(DORD);
+  SPSR = _BV(SPI2X);
 
-  The SPI library assumes that the hardware pins are used
-  */
-  SPI.begin();
-  //Board dependent defines
-  #if defined (__AVR__)
-    //For Arduino use the LSB first
-    SPI.setBitOrder(LSBFIRST);
-  #elif defined(__PIC32MX__)
-    //For ChipKit use MSBFIRST and REVERSE the bits on the SPI as LSBFIRST is not supported
-    SPI.setBitOrder(MSBFIRST);
-  #endif
-  SPI.setClockDivider(a_pins->spi_clock_divider);
-  SPI.setDataMode(SPI_MODE0);
+  _delay_ms(10);
 
   /* Initialize the ACI Command queue. This must be called after the delay above. */
   aci_queue_init(&aci_tx_q);
   aci_queue_init(&aci_rx_q);
 
-  //Configure the IO lines
-  pinMode(a_pins->rdyn_pin,		INPUT_PULLUP);
-  pinMode(a_pins->reqn_pin,		OUTPUT);
+  // Set up the SPI GPIO pins
+  SPI_DDR |= _BV(SPI_SCK) | _BV(SPI_MOSI) | _BV(SPI_REQ); // SCK, MOSI, and REQ are all outputs
+  SPI_DDR &= ~(_BV(SPI_MISO) | _BV(SPI_RDY)); // MISO and RDY are inputs
+  SPI_PORT |= _BV(SPI_RDY); // set the SPI RDY pin output to high (activate pullup resistor)
 
-  if (UNUSED != a_pins->active_pin)
-  {
-    pinMode(a_pins->active_pin,	INPUT);
-  }
   /* Pin reset the nRF8001, required when the nRF8001 setup is being changed */
   hal_aci_tl_pin_reset();
 
   /* Set the nRF8001 to a known state as required by the datasheet*/
-  digitalWrite(a_pins->miso_pin, 0);
-  digitalWrite(a_pins->mosi_pin, 0);
-  digitalWrite(a_pins->reqn_pin, 1);
-  digitalWrite(a_pins->sck_pin,  0);
+  SPI_PORT &= ~(_BV(SPI_MISO) | _BV(SPI_MOSI) | _BV(SPI_SCK));
+  SPI_PORT |= _BV(SPI_REQ);
 
-  delay(30); //Wait for the nRF8001 to get hold of its lines - the lines float for a few ms after the reset
+  _delay_ms(30); //Wait for the nRF8001 to get hold of its lines - the lines float for a few ms after the reset
 
   /* Attach the interrupt to the RDYN line as requested by the caller */
   if (a_pins->interface_is_interrupt)
   {
     // We use the LOW level of the RDYN line as the atmega328 can wakeup from sleep only on LOW
+    // TODO: port interrupt statement
     attachInterrupt(a_pins->interrupt_number, m_aci_isr, LOW);
   }
 }
@@ -410,7 +384,6 @@ bool hal_aci_tl_send(hal_aci_data_t *p_aci_cmd)
 
     if (aci_debug_print)
     {
-      Serial.print("C"); //ACI Command
       m_aci_data_print(p_aci_cmd);
     }
   }
@@ -420,16 +393,7 @@ bool hal_aci_tl_send(hal_aci_data_t *p_aci_cmd)
 
 static uint8_t spi_readwrite(const uint8_t aci_byte)
 {
-	//Board dependent defines
-#if defined (__AVR__)
-    //For Arduino the transmission does not have to be reversed
-    return SPI.transfer(aci_byte);
-#elif defined(__PIC32MX__)
-    //For ChipKit the transmission has to be reversed
-    uint8_t tmp_bits;
-    tmp_bits = SPI.transfer(REVERSE_BITS(aci_byte));
-	return REVERSE_BITS(tmp_bits);
-#endif
+  SPIDR = aci_byte; // Writing to the data register initiates transmission
 }
 
 bool hal_aci_tl_rx_q_empty (void)
