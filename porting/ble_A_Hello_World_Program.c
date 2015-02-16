@@ -169,6 +169,8 @@ void setup(void)
   //then we initialize the data structures required to setup the nRF8001
   //The second parameter is for turning debug printing on for the ACI Commands and Events so they be printed on the Serial
   lib_aci_init(&aci_state, false);
+
+  DDRB |= _BV(PB2);
 }
 
 void uart_over_ble_init(void)

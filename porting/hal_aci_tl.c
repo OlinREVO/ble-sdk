@@ -252,6 +252,12 @@ void hal_aci_tl_debug_print(bool enable)
 void hal_aci_tl_pin_reset(void)
 {
     RESET_PIN_DDR |= _BV(RESET_PIN); // set the reset pin to output
+
+    RESET_PIN_PORT |= _BV(RESET_PIN); // set reset pin to high
+    _delay_ms(100);
+    RESET_PIN_PORT &= ~(_BV(RESET_PIN)); // set reset pin to low
+    _delay_ms(100);
+    RESET_PIN_PORT |= _BV(RESET_PIN); // set reset pin to high
 }
 
 bool hal_aci_tl_event_peek(hal_aci_data_t *p_aci_data)
@@ -314,7 +320,7 @@ void hal_aci_tl_init(aci_pins_t *a_pins, bool debug)
   /* Needs to be called as the first thing for proper intialization*/
   m_aci_pins_set(a_pins);
 
-  // Enable SPI, enable interrupt, set as master, set clock prescalar at 8,
+  // Enable SPI, enable interrupt, set as master, set clock prescaler at 8,
   //  set LSB first, leave data mode at 0
   SPCR = _BV(SPE) | _BV(SPIE) | _BV(MSTR) | _BV(SPR0) | _BV(DORD);
   SPSR = _BV(SPI2X);
