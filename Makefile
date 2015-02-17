@@ -11,12 +11,13 @@
 TARGET = main
 # MCU: part number to build for
 MCU = atmega16m1
+
+SRC_FOLDER = src
+
 # SOURCES: list of input source sources
-SOURCES = $(shell ls *.c)
+SOURCES = $(shell ls $(SRC_FOLDER)/*.c)
 # SOURCES = ble_A_Hello_World_Program.c
 $(info $$SOURCES is [${SOURCES}])
-INCLUDE = $(shell ls *.h*)
-$(info $$INCLUDE is [${INCLUDE}])
 # OUTDIR: directory to use for output
 OUTDIR = build
 # PROGRAMMER: name of programmer
@@ -25,7 +26,7 @@ PROGRAMMER = avrispmkII
 PORT = usb
 
 # define flags
-CFLAGS = -mmcu=$(MCU) -g -Os -Wunused -std=c99 -IINCLUDE
+CFLAGS = -mmcu=$(MCU) -g -Os -Wunused -std=c99 -I.
 ASFLAGS = -mmcu=$(MCU) -x assembler-with-cpp -Wa,-gstabs
 LDFLAGS = -mmcu=$(MCU) -Wl,-Map=$(OUTDIR)/$(TARGET).map
 
@@ -72,7 +73,7 @@ $(OUTDIR)/%.elf: $(OBJECTS)
 	$(CC) $(OBJECTS) $(LDFLAGS) $(LIBS) -o $@
 
 # build all objects
-$(OUTDIR)/%.o: %.c | $(OUTDIR)
+$(OUTDIR)/%.o: $(SRC_FOLDER)/%.c | $(OUTDIR)
 	$(CC) -c $(CFLAGS) -o $@ $<
 
 # assembly listing
@@ -96,3 +97,5 @@ clean:
 	-$(RM) $(OUTDIR)/*
 
 .PHONY: all flash verify clean
+
+-include $(DEPENDS)
