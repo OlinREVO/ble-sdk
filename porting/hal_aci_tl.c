@@ -320,11 +320,6 @@ void hal_aci_tl_init(aci_pins_t *a_pins, bool debug)
   /* Needs to be called as the first thing for proper intialization*/
   m_aci_pins_set(a_pins);
 
-  // Enable SPI, enable interrupt, set as master, set clock prescaler at 8,
-  //  set LSB first, leave data mode at 0
-  SPCR = _BV(SPE) | _BV(SPIE) | _BV(MSTR) | _BV(SPR0) | _BV(DORD);
-  SPSR = _BV(SPI2X);
-
   _delay_ms(10);
 
   /* Initialize the ACI Command queue. This must be called after the delay above. */
@@ -335,6 +330,14 @@ void hal_aci_tl_init(aci_pins_t *a_pins, bool debug)
   SPI_DDR |= _BV(SPI_SCK) | _BV(SPI_MOSI) | _BV(SPI_REQ); // SCK, MOSI, and REQ are all outputs
   SPI_DDR &= ~(_BV(SPI_MISO) | _BV(SPI_RDY)); // MISO and RDY are inputs
   SPI_PORT |= _BV(SPI_RDY); // set the SPI RDY pin output to high (activate pullup resistor)
+  SS_DDR |= _BV(SS); // set the SPI SS to output - even though it's extraneous (inoperable without this step!)
+
+  _delay_ms(10);
+
+  // Enable SPI, enable interrupt, set as master, set clock prescaler at 8,
+  //  set LSB first, leave data mode at 0
+  SPCR = _BV(SPE) | _BV(SPIE) | _BV(MSTR) | _BV(SPR0) | _BV(DORD);
+  SPSR = _BV(SPI2X);
 
   /* Pin reset the nRF8001, required when the nRF8001 setup is being changed */
   hal_aci_tl_pin_reset();
@@ -385,7 +388,10 @@ bool hal_aci_tl_send(hal_aci_data_t *p_aci_cmd)
 
 static uint8_t spi_readwrite(const uint8_t aci_byte)
 {
-  SPDR = aci_byte; // Writing to the data register initiates transmission
+  // SPDR = aci_byte; // Writing to the data register initiates transmission
+  SPDR = 0x44; // "D"
+  while(!(SPSR & (1<<SPIF)))
+    ;
 }
 
 bool hal_aci_tl_rx_q_empty (void)

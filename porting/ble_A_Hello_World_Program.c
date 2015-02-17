@@ -145,6 +145,10 @@ The ACI Evt Data Credit provides the radio level ack of a transmitted packet.
 */
 void setup(void)
 {
+  // debug pin starts out low
+  DDRB |= _BV(PB2);
+  PORTB &= ~(_BV(PB2));
+
   /**
   Point ACI data structures to the the setup data that the nRFgo studio generated for the nRF8001
   */
@@ -169,8 +173,6 @@ void setup(void)
   //then we initialize the data structures required to setup the nRF8001
   //The second parameter is for turning debug printing on for the ACI Commands and Events so they be printed on the Serial
   lib_aci_init(&aci_state, false);
-
-  DDRB |= _BV(PB2);
 }
 
 void uart_over_ble_init(void)
@@ -346,8 +348,8 @@ void aci_loop()
                                             // Used to increase or decrease bandwidth
           timing_change_done = true;
 
-          char hello[]="Hello World, works";
-          uart_tx((uint8_t *)&hello[0], strlen(hello));
+          // char hello[]="Hello World, works";
+          // uart_tx((uint8_t *)&hello[0], strlen(hello));
         }
         break;
 
@@ -431,28 +433,30 @@ void loop() {
 
   //Process any ACI commands or events
   aci_loop();
+  // char hello[]="Hello World, works";
+  // uart_tx((uint8_t *)&hello[0], strlen(hello));
 
   // print the string when a newline arrives:
-  if (stringComplete) 
-  {
+  // if (stringComplete) 
+  // {
 
-    uart_buffer_len = stringIndex + 1;
+  //   uart_buffer_len = stringIndex + 1;
 
-    if (!lib_aci_send_data(PIPE_UART_OVER_BTLE_UART_TX_TX, uart_buffer, uart_buffer_len))
-    {
+  //   if (!lib_aci_send_data(PIPE_UART_OVER_BTLE_UART_TX_TX, uart_buffer, uart_buffer_len))
+  //   {
 
-    }
+  //   }
 
-    // clear the uart_buffer:
-    for (stringIndex = 0; stringIndex < 20; stringIndex++)
-    {
-      uart_buffer[stringIndex] = ' ';
-    }
+  //   // clear the uart_buffer:
+  //   for (stringIndex = 0; stringIndex < 20; stringIndex++)
+  //   {
+  //     uart_buffer[stringIndex] = ' ';
+  //   }
 
-    // reset the flag and the index in order to receive more data
-    stringIndex    = 0;
-    stringComplete = false;
-  }
+  //   // reset the flag and the index in order to receive more data
+  //   stringIndex    = 0;
+  //   stringComplete = false;
+  // }
 }
 
 /*

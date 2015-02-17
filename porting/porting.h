@@ -1,6 +1,6 @@
 #define F_CPU (1000000L)
 
-// all SPI pins are on the same port
+// all SPI pins (minus SS) are on the same port
 #define SPI_DDR         DDRB
 #define SPI_PORT        PORTB
 #define SPI_PIN         PINB
@@ -19,6 +19,10 @@
 
 // pin number 28
 #define SPI_SCK         PB7
+
+// pin number 2
+#define SS_DDR          DDRD
+#define SS              PD3
 
 // pin number 29
 #define RESET_PIN       PD0
