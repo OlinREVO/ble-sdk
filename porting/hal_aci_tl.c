@@ -388,10 +388,11 @@ bool hal_aci_tl_send(hal_aci_data_t *p_aci_cmd)
 
 static uint8_t spi_readwrite(const uint8_t aci_byte)
 {
-  // SPDR = aci_byte; // Writing to the data register initiates transmission
-  SPDR = 0x44; // "D"
-  while(!(SPSR & (1<<SPIF)))
-    ;
+  SPDR = aci_byte; // Writing to the data register initiates transmission
+  while(!(SPSR & (1<<SPIF))) {
+    // twiddle our thumbs until the SPI operation completes
+  }
+  return SPDR; // Read the data register to get the received value
 }
 
 bool hal_aci_tl_rx_q_empty (void)
