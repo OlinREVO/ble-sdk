@@ -278,6 +278,7 @@ void aci_loop()
   // We enter the if statement only when there is a ACI event available to be processed
   if (lib_aci_event_get(&aci_state, &aci_data))
   {
+    PORTB ^= _BV(PB2); // debug pin!
     aci_evt_t * aci_evt;
     aci_evt = &aci_data.evt;
     switch(aci_evt->evt_opcode)
@@ -348,8 +349,8 @@ void aci_loop()
                                             // Used to increase or decrease bandwidth
           timing_change_done = true;
 
-          // char hello[]="Hello World, works";
-          // uart_tx((uint8_t *)&hello[0], strlen(hello));
+          char hello[]="Hello REVO!";
+          uart_tx((uint8_t *)&hello[0], strlen(hello));
         }
         break;
 
@@ -433,9 +434,8 @@ void loop() {
 
   //Process any ACI commands or events
   aci_loop();
-  // char hello[]="Hello World, works";
-  // uart_tx((uint8_t *)&hello[0], strlen(hello));
 
+  // TODO: The following code will be used to send CAN messages over BLE eventually.
   // print the string when a newline arrives:
   // if (stringComplete) 
   // {
@@ -462,7 +462,7 @@ void loop() {
 /*
  This function was originally for Arduino Serial, but we can 
   eventually adapt it to work with CAN messages.
- Commented out for now.
+ Commented out for now. TODO
  */
 /*void serialEvent() {
 
