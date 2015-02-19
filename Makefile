@@ -16,8 +16,6 @@ SRC_FOLDER = src
 
 # SOURCES: list of input source sources
 SOURCES = $(shell ls $(SRC_FOLDER)/*.c)
-# SOURCES = ble_A_Hello_World_Program.c
-$(info $$SOURCES is [${SOURCES}])
 # OUTDIR: directory to use for output
 OUTDIR = build
 # PROGRAMMER: name of programmer
@@ -55,7 +53,6 @@ DEPEND = $(SOURCES:.c=.d)
 
 # list all object files
 OBJECTS = $(addprefix $(OUTDIR)/,$(notdir $(SOURCES:.c=.o)))
-$(info $$OBJECTS is [${OBJECTS}])
 
 # default: build hex file
 all: $(OUTDIR)/$(TARGET).hex
