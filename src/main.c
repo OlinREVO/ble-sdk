@@ -66,6 +66,7 @@ The following instructions describe the steps to be made on the Windows PC:
 #include "porting.h"
 #include "api.h"
 #include <string.h>
+#include <stdio.h>
 
 /**
 Put the nRF8001 setup in the RAM of the nRF8001.
@@ -350,8 +351,12 @@ void aci_loop()
                                             // Used to increase or decrease bandwidth
           timing_change_done = true;
 
+          // Send a sample textual message and sample CAN message
           char hello[]="Hello REVO!";
-          uart_tx((uint8_t *)&hello[0], strlen(hello));
+          uart_tx((uint8_t *)hello, strlen(hello));
+
+          uint8_t msg[] = {0xF4,0x2A,0xBB,0x12};
+          handleCANmsg(NODE_ble, MSG_speed, msg, 4);
         }
         break;
 
@@ -432,74 +437,26 @@ bool stringComplete = false;  // whether the string is complete
 uint8_t stringIndex = 0;      //Initialize the index to store incoming chars
 
 void loop() {
-
   //Process any ACI commands or events
   aci_loop();
-
-  // TODO: The following code will be used to send CAN messages over BLE eventually.
-  // print the string when a newline arrives:
-  // if (stringComplete) 
-  // {
-
-  //   uart_buffer_len = stringIndex + 1;
-
-  //   if (!lib_aci_send_data(PIPE_UART_OVER_BTLE_UART_TX_TX, uart_buffer, uart_buffer_len))
-  //   {
-
-  //   }
-
-  //   // clear the uart_buffer:
-  //   for (stringIndex = 0; stringIndex < 20; stringIndex++)
-  //   {
-  //     uart_buffer[stringIndex] = ' ';
-  //   }
-
-  //   // reset the flag and the index in order to receive more data
-  //   stringIndex    = 0;
-  //   stringComplete = false;
-  // }
 }
 
-/*
- This function was originally for Arduino Serial, but we can 
-  eventually adapt it to work with CAN messages.
- Commented out for now. TODO
- */
-/*void serialEvent() {
-
-  while(Serial.available() > 0){
-    // get the new byte:
-    dummychar = (uint8_t)Serial.read();
-    if(!stringComplete)
-    {
-      if (dummychar == '\n')
-      {
-        // if the incoming character is a newline, set a flag
-        // so the main loop can do something about it
-        stringIndex--;
-        stringComplete = true;
-      }
-      else
-      {
-        if(stringIndex > 19)
-        {
-          Serial.println("Serial input truncated");
-          stringIndex--;
-          stringComplete = true;
-        }
-        else
-        {
-          // add it to the uart_buffer
-          uart_buffer[stringIndex] = dummychar;
-          stringIndex++;
-        }
-      }
-    }
-  }
-}*/
-
+// Send a BLE message!
 void handleCANmsg(uint8_t destID, uint8_t msgID, uint8_t msg[], uint8_t msgLen) {
-  // Send a BLE message!
+  int i = 0;
+
+  // sprintf the data into a string for debugging right now
+  // MAXIMUM STRING LENGTH is 27
+  char message[28];
+  char *pos = message;
+
+  pos += sprintf(pos,"0x");
+  for (i=0;i<msgLen;i++) {
+    pos += sprintf(pos,"%.2X",msg[i]);
+  }
+
+  // send the string
+  uart_tx((uint8_t *)message, strlen(message));
 }
 
 // Convert the Arduino file layout to standard C
