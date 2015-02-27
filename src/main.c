@@ -64,6 +64,7 @@ The following instructions describe the steps to be made on the Windows PC:
 #include <util/delay.h>
 #include "uart_over_ble.h"
 #include "porting.h"
+#include "api.h"
 #include <string.h>
 
 /**
@@ -496,6 +497,10 @@ void loop() {
     }
   }
 }*/
+
+void handleCANmsg(uint8_t destID, uint8_t msgID, uint8_t msg[], uint8_t msgLen) {
+  // Send a BLE message!
+}
 
 // Convert the Arduino file layout to standard C
 int main() {

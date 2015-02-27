@@ -24,7 +24,7 @@ PROGRAMMER = avrispmkII
 PORT = usb
 
 # define flags
-CFLAGS = -mmcu=$(MCU) -g -Os -Wunused -std=c99 -I.
+CFLAGS = -mmcu=$(MCU) -g -Os -Wunused -std=c99 -I. -Isrc/ -Isrc/AVR-CAN/src/
 ASFLAGS = -mmcu=$(MCU) -x assembler-with-cpp -Wa,-gstabs
 LDFLAGS = -mmcu=$(MCU) -Wl,-Map=$(OUTDIR)/$(TARGET).map
 
