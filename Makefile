@@ -15,7 +15,7 @@ MCU = atmega16m1
 SRC_FOLDER = src
 
 # SOURCES: list of input source sources
-SOURCES = $(shell ls $(SRC_FOLDER)/*.c)
+SOURCES := $(shell find $(SRC_FOLDER) -name '*.c')
 # OUTDIR: directory to use for output
 OUTDIR = build
 # PROGRAMMER: name of programmer
@@ -52,7 +52,8 @@ AVRDUDE = avrdude
 DEPEND = $(SOURCES:.c=.d)
 
 # list all object files
-OBJECTS = $(addprefix $(OUTDIR)/,$(notdir $(SOURCES:.c=.o)))
+OBJECTS = $(addprefix $(OUTDIR)/,$(SOURCES:.c=.o))
+$(info $(OBJECTS))
 
 # default: build hex file
 all: $(OUTDIR)/$(TARGET).hex
@@ -70,7 +71,8 @@ $(OUTDIR)/%.elf: $(OBJECTS)
 	$(CC) $(OBJECTS) $(LDFLAGS) $(LIBS) -o $@
 
 # build all objects
-$(OUTDIR)/%.o: $(SRC_FOLDER)/%.c | $(OUTDIR)
+$(OUTDIR)/%.o: %.c | $(OUTDIR)
+	@mkdir -p $(@D)
 	$(CC) -c $(CFLAGS) -o $@ $<
 
 # assembly listing
@@ -91,7 +93,7 @@ verify: $(OUTDIR)/$(TARGET).hex
 
 # remove build artifacts and executables
 clean:
-	-$(RM) $(OUTDIR)/*
+	-$(RM) -r $(OUTDIR)/*
 
 .PHONY: all flash verify clean
 

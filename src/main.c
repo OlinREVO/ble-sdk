@@ -151,6 +151,8 @@ void setup(void)
   DDRB |= _BV(PB2);
   PORTB &= ~(_BV(PB2));
 
+  initCAN(NODE_ble);
+
   /**
   Point ACI data structures to the the setup data that the nRFgo studio generated for the nRF8001
   */
@@ -280,7 +282,6 @@ void aci_loop()
   // We enter the if statement only when there is a ACI event available to be processed
   if (lib_aci_event_get(&aci_state, &aci_data))
   {
-    PORTB ^= _BV(PB2); // debug pin!
     aci_evt_t * aci_evt;
     aci_evt = &aci_data.evt;
     switch(aci_evt->evt_opcode)
@@ -357,6 +358,7 @@ void aci_loop()
 
           uint8_t msg[] = {0xF4,0x2A,0xBB,0x12};
           handleCANmsg(NODE_ble, MSG_speed, msg, 4);
+          PORTB |= _BV(PB2); // debug pin!
         }
         break;
 
@@ -444,7 +446,7 @@ void loop() {
 // Send a BLE message!
 void handleCANmsg(uint8_t destID, uint8_t msgID, uint8_t msg[], uint8_t msgLen) {
   int i = 0;
-
+  PORTB |= _BV(PB2); // debug pin!
   // sprintf the data into a string for debugging right now
   // MAXIMUM STRING LENGTH is 27
   char message[28];
