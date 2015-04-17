@@ -1,10 +1,11 @@
 #include "api.h"
+#include <assert.h>
 
 // must be called before CAN can be used
 // Sample call: initCAN(NODE_speedometer);
 int initCAN(uint8_t nodeID) {
     sei(); // enable global interrupts
-    
+
     CANGCON = _BV(SWRES); //Software reset
     CANTCON = 0x00; //CAN timing prescaler set to 0;
 
@@ -97,8 +98,8 @@ void readMsg(void) {
     }
 
     // take all of IDT1 and the first 3 bits of IDT2
-    uint16_t idtag = (_BV(CANIDT1) << 3) | ((_BV(CANIDT2) & 0xE0) >> 5);
-    uint8_t nodeID = (idtag & 0x07C0); // nodeID is bits 6-10 (0b11111000000)
+    uint16_t idtag = (CANIDT1 << 3) | ((CANIDT2 & 0xE0) >> 5);
+    uint8_t nodeID = ((idtag & 0x07C0) >> 6); // nodeID is bits 6-10 (0b11111000000)
     uint8_t msgID = (idtag & 0x003F); // msgID is bits 0-5 (0b111111)
 
     // externally-defined handler method
@@ -110,7 +111,7 @@ void readMsg(void) {
 // Sample call: sendCANmsg(NODE_watchdog,MSG_critical,data,dataLen);
 int sendCANmsg(uint8_t destID, uint8_t msgID, uint8_t msg[], uint8_t msgLength) {
     // use MOb 0 for sending and auto-increment bits in CAN page MOb register
-    CANPAGE = ( _BV(AINC));
+    //CANPAGE = ( _BV(AINC)); //<--THIS IS INCORRECT, DISABLES AUTO-INCREMENT, KEPT HERE FOR RECORD
 
     //Wait for MOb1 to be free
     // TODO: This is not good practice; take another look later
@@ -129,6 +130,8 @@ int sendCANmsg(uint8_t destID, uint8_t msgID, uint8_t msg[], uint8_t msgLength) 
     // set compatibility registers, RTR bit, and reserved bit to 0
     CANIDT4 = 0;
     CANIDT3 = 0;
+
+    assert(msgID != 0); //TO-DO FIGURE THIS OUT
 
     // set ID tag registers
     uint16_t idtag = ((destID & 0x1F) << 6) | (msgID & 0x3F);
@@ -165,7 +168,7 @@ ISR(CAN_INT_vect) {
     } else {
         CANSTMOB &= 0; // unknown interrupt
     }
-    
+
     SREG=cSREG; //restore SREG
 }
 
@@ -174,6 +177,6 @@ ISR(CAN_INT_vect) {
  *  will be called from an ISR and will delay your main loop
 
 void handleCANmsg(uint8_t destID, uint8_t msgID, char* msg, uint8_t msgLen) {
-    
+
 }
 */

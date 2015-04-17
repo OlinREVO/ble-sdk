@@ -67,7 +67,7 @@ The following instructions describe the steps to be made on the Windows PC:
 #include "api.h"
 #include <string.h>
 #include <stdio.h>
-
+#include <assert.h>
 /**
 Put the nRF8001 setup in the RAM of the nRF8001.
 */
@@ -452,18 +452,24 @@ void handleCANmsg(uint8_t destID, uint8_t msgID, uint8_t msg[], uint8_t msgLen) 
   char message[28];
   char *pos = message;
 
-  pos += sprintf(pos,"0x");
+//  pos += sprintf(pos, "%X", destID);
+
+  //pos += sprintf(pos,"0x");
+
   for (i=0;i<msgLen;i++) {
-    pos += sprintf(pos,"%.2X",msg[i]);
+    message[i] = msg[i];
+
+    //pos += sprintf(pos,"%.2X",msg[i]);
   }
 
   // send the string
   uart_tx((uint8_t *)message, strlen(message));
-}
+
+ }
 
 // Convert the Arduino file layout to standard C
 int main() {
-  setup(); 
+  setup();
   while(1)
     {
       loop();
